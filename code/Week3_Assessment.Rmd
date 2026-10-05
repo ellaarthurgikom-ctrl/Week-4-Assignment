@@ -111,6 +111,7 @@ but that isn't the case here.
 
 library(DT)
 datatable(nhanes)
+
 ```{r ex2-age, fig.width=6, fig.height=4}
 age_plot <- ggplot(nhanes, aes(x = age)) +
   geom_histogram(binwidth = 5, boundary = 0, fill = "steelblue", color = "white") +
