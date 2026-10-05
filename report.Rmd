@@ -1,0 +1,68 @@
+---
+title: "NHANES Dataset Summary"
+author: "Emmanuella Arthur"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document: default
+  pdf_document: default
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(kableExtra)
+
+# Import the dataset
+nhanes <- read_csv("data/cleaned_NHANES.csv")
+
+# Ensure avg_sbp is calculated if missing
+if (!"avg_sbp" %in% colnames(nhanes)) {
+  nhanes <- nhanes %>%
+    rowwise() %>%
+    mutate(
+      avg_sbp = if (all(is.na(c_across(starts_with("systolic_bp"))))) NA_real_ else mean(c_across(starts_with("systolic_bp")), na.rm = TRUE)
+    ) %>%
+    ungroup()
+}
+```
+Introduction
+The National Health and Nutrition Examination Survey (NHANES) provides critical data on the health and nutritional status of the population [@nhanes].
+
+Participant Characteristics
+The table below outlines the overall sample size, gender distribution, ethnic breakdown, and summary statistics for average systolic blood pressure across each survey wave.
+```
+# Calculate summary statistics by wave
+summary_data <- nhanes %>%
+  group_by(wave) %>%
+  summarise(
+    total_n = n(),
+    male_n = sum(gender == "Male", na.rm = TRUE),
+    male_pct = round((male_n / total_n) * 100, 1),
+    white_n = sum(ethnicity_2 == "White", na.rm = TRUE),
+    white_pct = round((white_n / total_n) * 100, 1),
+    black_n = sum(ethnicity_2 == "Black", na.rm = TRUE),
+    black_pct = round((black_n / total_n) * 100, 1),
+    mexican_n = sum(ethnicity_2 == "Mexican", na.rm = TRUE),
+    mexican_pct = round((mexican_n / total_n) * 100, 1),
+    sbp_min = round(min(avg_sbp, na.rm = TRUE), 1),
+    sbp_max = round(max(avg_sbp, na.rm = TRUE), 1),
+    sbp_median = round(median(avg_sbp, na.rm = TRUE), 1),
+    sbp_mean = round(mean(avg_sbp, na.rm = TRUE), 1),
+    sbp_sd = round(sd(avg_sbp, na.rm = TRUE), 1)
+  )
+
+# Build the LaTeX-friendly table
+summary_data %>%
+  kable(
+    col.names = c("Wave", "Total N", "N", "%", "White (N)", "White (%)", "Black (N)", "Black (%)", "Mexican (N)", "Mexican (%)", "Min", "Max", "Median", "Mean", "SD"),
+    caption = "NHANES Sample Characteristics by Wave",
+    booktabs = TRUE,
+    align = "c"
+  ) %>%
+  kable_styling(latex_options = c("scale_down", "hold_position")) %>%
+  add_header_above(c(" " = 2, "Males" = 2, "Ethnicity" = 6, "Systolic BP" = 5)) %>%
+  row_spec(0, bold = TRUE)
+
+```
+As demonstrated in the table, the distribution of participants across major demographic categories and the average systolic blood pressure measurements remain relatively consistent across the recorded survey waves.
