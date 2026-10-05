@@ -1,0 +1,37 @@
+---
+title: "NHANES Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(flexdashboard)
+
+# Load data
+nhanes <- read_csv("data/cleaned_NHANES.csv")
+
+# Calculate avg_sbp if not already saved
+if (!"avg_sbp" %in% colnames(nhanes)) {
+  nhanes <- nhanes %>%
+    rowwise() %>%
+    mutate(
+      avg_sbp = if (all(is.na(c_across(starts_with("systolic_bp"))))) NA_real_ else mean(c_across(starts_with("systolic_bp")), na.rm = TRUE)
+    ) %>%
+    ungroup()
+}
+
+ggplot(nhanes, aes(x = age)) +
+  geom_histogram(binwidth = 5, boundary = 0, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Age", x = "Age (years)", y = "Count")
+
+pct_adults <- round(mean(nhanes$age >= 21, na.rm = TRUE) * 100, 1)
+
+gauge(pct_adults, min = 0, max = 100, symbol = '%', 
+      gaugeSectors(success = c(50, 100), warning = c(20, 49), danger = c(0, 19)))
+
+pct_high_bp <- round(mean(nhanes$avg_sbp > 120, na.rm = TRUE) * 100, 1)
+
+valueBox(pct_high_bp, icon = "fa-heartbeat", color = "warning")
+
